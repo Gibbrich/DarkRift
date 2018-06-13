@@ -1,13 +1,12 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
+using AgarPlugin;
 using DarkRift.Client;
 using DarkRift.Client.Unity;
 using UnityEngine;
 
 public class PlayerSpawner : MonoBehaviour
 {
-    const byte SPAWN_TAG = 0;
-
     [SerializeField]
     [Tooltip("The DarkRift client to communicate on.")]
     UnityClient client;
@@ -44,15 +43,15 @@ public class PlayerSpawner : MonoBehaviour
             Application.Quit();
         }
 
-        client.MessageReceived += SpawnPlayer;
+        client.MessageReceived += MessageReceived;
     }
 
-    private void SpawnPlayer(object sender, MessageReceivedEventArgs e)
+    private void SpawnPlayer(MessageReceivedEventArgs e)
     {
         using (var message = e.GetMessage())
         using (var reader = message.GetReader())
         {
-            if (message.Tag != SPAWN_TAG)
+            if (message.Tag != Tags.SPAWN_PLAYER)
             {
                 return;
             }
@@ -83,6 +82,8 @@ public class PlayerSpawner : MonoBehaviour
 
                     var player = obj.GetComponent<Player>();
                     player.Client = client;
+
+                    Camera.main.GetComponent<CameraFollow>().Target = obj.transform;
                 }
                 else
                 {
@@ -95,6 +96,32 @@ public class PlayerSpawner : MonoBehaviour
                 
                 networkPlayerManager.Add(id, agarObject);
             }
+        }
+    }
+    
+    private void MessageReceived(object sender, MessageReceivedEventArgs e)
+    {
+        switch (e.Tag)
+        {
+            case Tags.SPAWN_PLAYER:
+                SpawnPlayer(e);
+                break;
+
+            case Tags.DESPAWN_PLAYER:
+                DespawnPlayer(e);
+                break;
+
+            default:
+                return;
+        }
+    }
+
+    private void DespawnPlayer(MessageReceivedEventArgs e)
+    {
+        using (var reader = e.GetMessage().GetReader())
+        {
+            var id = reader.ReadUInt16();
+            networkPlayerManager.Destroy(id);
         }
     }
 }

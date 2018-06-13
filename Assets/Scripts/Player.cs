@@ -2,16 +2,14 @@
 using System.Collections.Generic;
 using System.Reactive;
 using System.Reactive.Linq;
+using AgarPlugin;
 using DarkRift;
 using DarkRift.Client.Unity;
 using UnityEngine;
 
 public class Player : MonoBehaviour
 {
-    const byte MOVEMENT_TAG = 1;
-    const ushort MOVE_SUBJECT = 0;
-
-    [SerializeField]
+    [SerializeField] 
     [Tooltip("The distance we can move before we send a position update.")]
     float moveDistance = 0.05f;
 
@@ -29,12 +27,14 @@ public class Player : MonoBehaviour
         if (Vector3.Distance(lastPosition, transform.position) > moveDistance)
         {
             using (var writer = DarkRiftWriter.Create())
-            using (var message = Message.Create(MOVEMENT_TAG, writer))
             {
                 writer.Write(transform.position.x);
                 writer.Write(transform.position.y);
 
-                Client.SendMessage(message, SendMode.Unreliable);
+                using (var message = Message.Create(Tags.MOVE_PLAYER, writer))
+                {
+                    Client.SendMessage(message, SendMode.Unreliable);
+                }
             }
 
             lastPosition = transform.position;
